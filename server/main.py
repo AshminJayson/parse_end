@@ -1,8 +1,9 @@
+import json
 import uuid
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 import pika
 
-from utils import fetch_records_with_file_id
+from server.utils import fetch_records_with_file_id
 
 app = FastAPI()
 
@@ -42,4 +43,14 @@ async def receive_file(file: UploadFile):
 @app.get("/file")
 async def get_questions(fileId: str):
     results = fetch_records_with_file_id(fileId)
-    return {"fileId": fileId}
+    page_by_page_results = []
+    if len(results) == 0:
+        return HTTPException(404, detail='Invalid fileId')
+
+    if results[0][2] < results[0][3]:
+        return HTTPException(100, detail='File is still being processed')
+
+    for result in results:
+        json_results = json.loads(result[5])
+        page_by_page_results.append(json_results)
+    return page_by_page_results
