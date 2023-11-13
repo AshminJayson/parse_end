@@ -11,7 +11,7 @@ async def read_root():
 save_path = "C:\\Users\\ashmi\\Repos\\opengrad\\parse_end\\temp_files"
 
 
-def send_message_to_file_queue(file_id_name: str):
+def send_message_to_file_queue(file_id: str):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
@@ -20,19 +20,17 @@ def send_message_to_file_queue(file_id_name: str):
 
     channel.basic_publish(exchange='',
                           routing_key=queue_name,
-                          body=file_id_name)
+                          body=file_id)
 
     connection.close()
 
 
 @app.post("/file/")
 async def receive_file(file: UploadFile):
-    file_id = uuid.uuid4()
-    filename_split = list(file.filename.split('.'))
-    file_id_name = str(file_id) + '.' + filename_split[-1]
+    file_id = str(uuid.uuid4())
 
-    with open(f"{save_path}\\{file_id_name}", "wb") as f:
+    with open(f"{save_path}\\{file_id}", "wb") as f:
         f.write(await file.read())
 
-    send_message_to_file_queue(file_id_name)
+    send_message_to_file_queue(file_id)
     return {"filename": file.filename}

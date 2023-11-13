@@ -1,3 +1,4 @@
+import json
 import uuid
 import pika
 import sys
@@ -17,12 +18,12 @@ class Page:
         self.content = content
 
 
-base_path = "C:\\Users\\ashmi\\Repos\\opengrad\\parse_end\\temp_files"
+base_file_path = "C:\\Users\\ashmi\\Repos\\opengrad\\parse_end\\temp_files"
 
 
-def extract_text_from_pages(file_id_name: str) -> list[Page]:
+def extract_text_from_pages(file_id: str) -> list[Page]:
     pages = []
-    with open(base_path + "\\" + file_id_name, 'rb') as file:
+    with open(base_file_path + "\\" + file_id, 'rb') as file:
         resource_manager = PDFResourceManager()
         output_string = io.StringIO()
         converter = TextConverter(
@@ -33,8 +34,10 @@ def extract_text_from_pages(file_id_name: str) -> list[Page]:
         for page in PDFPage.get_pages(file, check_extractable=True):
             page_interpreter.process_page(page)
             content = output_string.getvalue()
+            page_id = str(uuid.uuid4())
+
             pages.append(
-                Page(count, str(uuid.uuid4()), file_id_name, content))
+                Page(count, page_id, file_id, content))
             count += 1
 
         converter.close()
@@ -43,7 +46,7 @@ def extract_text_from_pages(file_id_name: str) -> list[Page]:
     return pages
 
 
-def send_page_content_message():
+def send_page_content_message(page_string: str):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters('localhost'))
     channel = connection.channel()
@@ -52,7 +55,7 @@ def send_page_content_message():
 
     channel.basic_publish(exchange='',
                           routing_key=queue_name,
-                          body='Hello World!')
+                          body=page_string)
 
     connection.close()
 
@@ -65,8 +68,14 @@ def main():
     channel.queue_declare(queue=queue_name)
 
     def callback(ch, method, properties, body):
-        file_id_name = body.decode('utf-8')
-        pages: list[Page] = extract_text_from_pages(file_id_name)
+        file_id = body.decode('utf-8')
+        print(f"Processing file {file_id}...")
+        pages: list[Page] = extract_text_from_pages(file_id)
+
+        for page in pages[:1]:
+            page_string = json.dumps(page.__dict__)
+            send_page_content_message(page_string)
+        print(f"File {file_id} has been completely processed.")
 
     channel.basic_consume(
         queue=queue_name, on_message_callback=callback, auto_ack=True)
