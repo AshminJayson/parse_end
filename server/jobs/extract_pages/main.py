@@ -11,8 +11,9 @@ from pdfminer.pdfpage import PDFPage
 
 
 class Page:
-    def __init__(self, page_number, page_id, file_id, content):
+    def __init__(self, page_number, page_id, file_id, content, total_pages):
         self.page_number = page_number
+        self.total_pages = total_pages
         self.page_id = page_id
         self.file_id = file_id
         self.content = content
@@ -37,11 +38,14 @@ def extract_text_from_pages(file_id: str) -> list[Page]:
             page_id = str(uuid.uuid4())
 
             pages.append(
-                Page(count, page_id, file_id, content))
+                Page(count, page_id, file_id, content, 0))
             count += 1
 
         converter.close()
         output_string.close()
+
+    for page in pages:
+        page.total_pages = len(pages)
 
     return pages
 
@@ -71,10 +75,11 @@ def main():
         file_id = body.decode('utf-8')
         print(f"Processing file {file_id}...")
         pages: list[Page] = extract_text_from_pages(file_id)
-
-        for page in pages[:1]:
+        print("Total pages: ", len(pages))
+        for page in pages:
             page_string = json.dumps(page.__dict__)
             send_page_content_message(page_string)
+
         print(f"File {file_id} has been completely processed.")
 
     channel.basic_consume(

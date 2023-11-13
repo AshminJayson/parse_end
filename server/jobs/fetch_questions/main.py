@@ -1,18 +1,40 @@
-import json
-import timeit
-from dotenv import load_dotenv
-import pika
-import sys
-import os
 import openai
+import os
+import sys
+import pika
+from dotenv import load_dotenv
+import timeit
+import json
+import psycopg2
+
 
 load_dotenv()
+
+
+def insert_page_to_db(fileId, pageId, pageNumber, totalPages, content, questions):
+    # Connect to the database
+    conn = psycopg2.connect(
+        host=os.getenv("DB_HOST"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD")
+    )
+
+    cur = conn.cursor()
+    query = f"insert into pages values ('{pageId}', '{fileId}', '{pageNumber}', '{totalPages}', '{content}', '{questions}');"
+    cur.execute(query)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 class Page:
-    def __init__(self, page_number, page_id, file_id, content):
+    def __init__(self, page_number, page_id, file_id, content, total_pages):
         self.page_number = page_number
+        self.total_pages = total_pages
         self.page_id = page_id
         self.file_id = file_id
         self.content = content
@@ -45,6 +67,7 @@ def get_structured_questions(page: Page):
 
                 ---END INSTRUCTIONS--- 
                 """
+
     starttime = timeit.default_timer()
     response = openai.chat.completions.create(model='gpt-3.5-turbo-16k', messages=[
         {"role": "user", "content": prompt}
@@ -52,7 +75,7 @@ def get_structured_questions(page: Page):
     print(f"Time taken : ", timeit.default_timer() - starttime)
 
     print(response.usage, "\n\n")
-    print(response.choices[0].message.content)
+    return response.choices[0].message.content
 
 
 def main():
@@ -65,11 +88,19 @@ def main():
     def callback(ch, method, properties, body):
         page_dict = json.loads(body.decode())
         page = Page(page_dict['page_number'], page_dict['page_id'],
-                    page_dict['file_id'], page_dict['content'])
+                    page_dict['file_id'], page_dict['content'], page_dict['total_pages'])
         print(
-            f"Processing page {page.page_number} from file {page.file_id}...")
+            f"Processing page {page.page_number} | {page.page_id} from file {page.file_id}...")
 
-        get_structured_questions(page)
+        parsed_questions = get_structured_questions(page)
+
+        # Done to tackle postgress text input issue which does not allow single quotes in the text
+        parsed_questions = parsed_questions.replace("'", "\"")
+
+        print(
+            f"Updating database for page {page.page_number} of file {page.file_id}...")
+        insert_page_to_db(page.file_id, page.page_id,
+                          page.page_number, page.total_pages, page.content, parsed_questions)
 
         print(
             f"Page {page.page_number} from file {page.file_id} has been completely processed.")

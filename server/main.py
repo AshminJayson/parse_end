@@ -1,6 +1,9 @@
 import uuid
 from fastapi import FastAPI, File, UploadFile
 import pika
+
+from utils import fetch_records_with_file_id
+
 app = FastAPI()
 
 
@@ -33,4 +36,10 @@ async def receive_file(file: UploadFile):
         f.write(await file.read())
 
     send_message_to_file_queue(file_id)
-    return {"filename": file.filename}
+    return {"fileId": file_id}
+
+
+@app.get("/file")
+async def get_questions(fileId: str):
+    results = fetch_records_with_file_id(fileId)
+    return {"fileId": fileId}

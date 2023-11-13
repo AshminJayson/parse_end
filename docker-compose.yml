@@ -2,10 +2,30 @@ version: '3'
 
 services:
   rabbitmq:
+    # Default username/password is guest/guest
     image: rabbitmq:3.8-management 
     ports:
       - 5672:5672
       - 15672:15672
     container_name: rabbitmq
     restart: unless-stopped
-    # Default username/password is guest/guest
+
+  db:
+    # Default Configuration
+    # Server : <container_name>
+    # Username : postgres
+    # Password : <POSTGRES_PASSWORD>
+    # Database : <empty>
+    container_name: store
+    image: postgres
+    restart: always
+    environment:
+        POSTGRES_PASSWORD: example
+    ports:
+        - 5432:5432
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+        - 8080:8080
