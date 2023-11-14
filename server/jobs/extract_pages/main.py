@@ -1,5 +1,6 @@
 import json
 import uuid
+from dotenv import load_dotenv
 import pika
 import sys
 import os
@@ -8,6 +9,8 @@ from pdfminer.converter import TextConverter
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfpage import PDFPage
+
+load_dotenv()
 
 
 class Page:
@@ -19,12 +22,12 @@ class Page:
         self.content = content
 
 
-base_file_path = "C:\\Users\\ashmi\\Repos\\opengrad\\parse_end\\temp_files"
+temp_files_path = os.getenv('TEMP_FILES_PATH')
 
 
 def extract_text_from_pages(file_id: str) -> list[Page]:
     pages = []
-    with open(base_file_path + "\\" + file_id, 'rb') as file:
+    with open(temp_files_path + "\\" + file_id, 'rb') as file:
         resource_manager = PDFResourceManager()
         output_string = io.StringIO()
         converter = TextConverter(
@@ -37,6 +40,7 @@ def extract_text_from_pages(file_id: str) -> list[Page]:
             content = output_string.getvalue()
             page_id = str(uuid.uuid4())
 
+            print(content)
             pages.append(
                 Page(count, page_id, file_id, content, 0))
             count += 1
