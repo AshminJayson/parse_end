@@ -104,9 +104,11 @@ def main():
 
         print(
             f"Page {page.page_number} from file {page.file_id} has been completely processed.")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
+    channel.basic_qos(prefetch_count=1)
     channel.basic_consume(
-        queue='pages', on_message_callback=callback, auto_ack=True)
+        queue='pages', on_message_callback=callback, auto_ack=False)
 
     print(' [*] Waiting for messages. To exit press CTRL+C')
     channel.start_consuming()
