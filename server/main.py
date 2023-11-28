@@ -51,6 +51,6 @@ async def get_questions(fileId: str):
         return HTTPException(100, detail='File is still being processed')
 
     for result in results:
-        json_results = json.loads(result[5])
+        json_results = json.loads(result[5], strict=False)
         page_by_page_results.append(json_results)
     return page_by_page_results
