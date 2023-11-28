@@ -1,3 +1,4 @@
+import threading
 import openai
 import os
 import sys
@@ -78,6 +79,32 @@ def get_structured_questions(page: Page):
     return response.choices[0].message.content
 
 
+def thread_wrapper(ch, method, body):
+    page_dict = json.loads(body.decode())
+    page = Page(page_dict['page_number'], page_dict['page_id'],
+                page_dict['file_id'], page_dict['content'], page_dict['total_pages'])
+    print(
+        f"Processing page {page.page_number} | {page.page_id} from file {page.file_id}...")
+
+    parsed_questions = get_structured_questions(page)
+
+    # Done to tackle postgress text input issue which does not allow single quotes in the text
+    if parsed_questions[0] == "'":
+        parsed_questions = parsed_questions[1:-1]
+    parsed_questions = parsed_questions.replace("'", "''")
+
+    print(parsed_questions)
+
+    print(
+        f"Updating database for page {page.page_number} of file {page.file_id}...")
+    insert_page_to_db(page.file_id, page.page_id,
+                      page.page_number, page.total_pages, "", parsed_questions)
+
+    print(
+        f"Page {page.page_number} from file {page.file_id} has been completely processed.")
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+
 def main():
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
@@ -86,25 +113,8 @@ def main():
     channel.queue_declare(queue='pages')
 
     def callback(ch, method, properties, body):
-        page_dict = json.loads(body.decode())
-        page = Page(page_dict['page_number'], page_dict['page_id'],
-                    page_dict['file_id'], page_dict['content'], page_dict['total_pages'])
-        print(
-            f"Processing page {page.page_number} | {page.page_id} from file {page.file_id}...")
-
-        parsed_questions = get_structured_questions(page)
-
-        # Done to tackle postgress text input issue which does not allow single quotes in the text
-        parsed_questions = parsed_questions.replace("'", "\"")
-
-        print(
-            f"Updating database for page {page.page_number} of file {page.file_id}...")
-        insert_page_to_db(page.file_id, page.page_id,
-                          page.page_number, page.total_pages, page.content, parsed_questions)
-
-        print(
-            f"Page {page.page_number} from file {page.file_id} has been completely processed.")
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        t = threading.Thread(target=thread_wrapper, args=(ch, method, body))
+        t.start()
 
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(

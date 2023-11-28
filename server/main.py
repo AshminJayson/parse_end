@@ -47,7 +47,7 @@ async def get_questions(fileId: str):
     if len(results) == 0:
         return HTTPException(404, detail='Invalid fileId')
 
-    if results[0][2] < results[0][3]:
+    if len(results) < results[0][3]:
         return HTTPException(100, detail='File is still being processed')
 
     for result in results:
