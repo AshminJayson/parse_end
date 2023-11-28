@@ -28,16 +28,17 @@ temp_files_path = os.getenv('TEMP_FILES_PATH')
 def extract_text_from_pages(file_id: str) -> list[Page]:
     pages = []
     with open(temp_files_path + "\\" + file_id, 'rb') as file:
-        resource_manager = PDFResourceManager()
-        output_string = io.StringIO()
-        converter = TextConverter(
-            resource_manager, output_string, laparams=None)
-        page_interpreter = PDFPageInterpreter(resource_manager, converter)
 
         count = 1
         for page in PDFPage.get_pages(file, check_extractable=True):
+            resource_manager = PDFResourceManager()
+            output_string = io.StringIO()
+            converter = TextConverter(
+                resource_manager, output_string, laparams=None)
+            page_interpreter = PDFPageInterpreter(resource_manager, converter)
             page_interpreter.process_page(page)
             content = output_string.getvalue()
+
             page_id = str(uuid.uuid4())
 
             print(content)
