@@ -45,6 +45,8 @@ def get_structured_questions(page: Page):
     prompt = f"""
                 var promptText = $@"---BEGIN INSTRUCTIONS---
                 Identify and extract mcqs questions from the given text in the below mentioned format.
+                Do not reduce the question and capture the entire question for a given set of options.
+                Capture the entire question starting from the question number.
 
                 TEXT : {page.content}
 

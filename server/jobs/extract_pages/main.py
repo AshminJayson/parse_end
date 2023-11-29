@@ -9,6 +9,9 @@ from pdfminer.converter import TextConverter
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfpage import PDFPage
+from pdf2image import convert_from_path
+from google.cloud import vision
+from google.cloud.vision_v1 import types
 
 load_dotenv()
 
@@ -25,32 +28,72 @@ class Page:
 temp_files_path = os.getenv('TEMP_FILES_PATH')
 
 
+def save_pdf_as_image(path):
+    # Set up PDF to image conversion
+    images = convert_from_path(path, 500)
+    images_path = []
+    for i in range(len(images)):
+        # Save pages as images in the pdf
+        images_path.append(temp_files_path + "\\" + 'page' + str(i) + '.jpg')
+        images[i].save(temp_files_path + "\\" +
+                       'page' + str(i) + '.jpg', 'JPEG')
+
+    return images_path
+
+
+def fetch_image_details(images_paths):
+    client = vision.ImageAnnotatorClient()
+    page_contents = []
+    for ind, path in enumerate(images_paths):
+        with open(path, "rb") as image_file:
+            image_content = image_file.read()
+
+            # Set up image object
+            image = types.Image(content=image_content)
+
+            # Perform OCR using full text annotations
+            print(f'Performing OCR on page {ind}')
+            response = client.document_text_detection(image=image)
+            document = response.full_text_annotation
+
+            page_contents.append(document.text)
+
+    return page_contents
+
+
 def extract_text_from_pages(file_id: str) -> list[Page]:
     pages = []
-    with open(temp_files_path + "\\" + file_id, 'rb') as file:
+    pdf_path = temp_files_path + "\\" + file_id
+    # with open(pdf_path, 'rb') as file:
 
-        count = 1
-        for page in PDFPage.get_pages(file, check_extractable=True):
-            resource_manager = PDFResourceManager()
-            output_string = io.StringIO()
-            converter = TextConverter(
-                resource_manager, output_string, laparams=None)
-            page_interpreter = PDFPageInterpreter(resource_manager, converter)
-            page_interpreter.process_page(page)
-            content = output_string.getvalue()
+    #     count = 1
 
-            page_id = str(uuid.uuid4())
+    #     for page in PDFPage.get_pages(file, check_extractable=True):
+    #         resource_manager = PDFResourceManager()
+    #         output_string = io.StringIO()
+    #         converter = TextConverter(
+    #             resource_manager, output_string, laparams=None)
+    #         page_interpreter = PDFPageInterpreter(resource_manager, converter)
+    #         page_interpreter.process_page(page)
+    #         content = output_string.getvalue()
 
-            print(content)
-            pages.append(
-                Page(count, page_id, file_id, content, 0))
-            count += 1
+    #         page_id = str(uuid.uuid4())
 
-        converter.close()
-        output_string.close()
+    #         print(content)
+    #         pages.append(
+    #             Page(count, page_id, file_id, content, 0))
+    #         count += 1
 
-    for page in pages:
-        page.total_pages = len(pages)
+    #     converter.close()
+    #     output_string.close()
+
+    images_paths = save_pdf_as_image(pdf_path)
+    page_contents = fetch_image_details(images_paths)
+
+    for ind, content in enumerate(page_contents):
+        page_id = str(uuid.uuid4())
+        pages.append(Page(ind + 1, page_id, file_id,
+                     content, len(page_contents)))
 
     return pages
 

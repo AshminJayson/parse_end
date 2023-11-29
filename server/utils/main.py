@@ -34,7 +34,7 @@ def fetch_all_records():
 
 
 def fetch_records_with_file_id(fileId: str):
-    query = f"select * from pages where file_id = '{fileId}'"
+    query = f"select * from pages where file_id = '{fileId}' order by page_number asc"
     cur, conn = get_connection()
     cur.execute(query)
 

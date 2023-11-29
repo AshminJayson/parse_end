@@ -1,11 +1,25 @@
 import json
 import uuid
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import pika
 
 from server.utils import fetch_records_with_file_id
 
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -29,7 +43,7 @@ def send_message_to_file_queue(file_id: str):
     connection.close()
 
 
-@app.post("/file/")
+@app.post("/file")
 async def receive_file(file: UploadFile):
     file_id = str(uuid.uuid4())
 
@@ -45,12 +59,17 @@ async def get_questions(fileId: str):
     results = fetch_records_with_file_id(fileId)
     page_by_page_results = []
     if len(results) == 0:
-        return HTTPException(404, detail='Invalid fileId')
+        return HTTPException(404, detail='Invalid fileId or file is still being parsed')
 
-    if len(results) < results[0][3]:
-        return HTTPException(100, detail='File is still being processed')
+    # if len(results) < results[0][3]:
+    #     return HTTPException(100, detail=f'File is still being processed | completed {len(results)} of {results[0][3]} pages')
 
-    for result in results:
-        json_results = json.loads(result[5], strict=False)
-        page_by_page_results.append(json_results)
+    for ind, result in enumerate(results):
+        try:
+            json_results = json.loads(result[5], strict=False)
+            page_by_page_results.append(json_results)
+        except:
+            print(f'Error in parsing page {ind+1}')
+            print(result[5])
+            # page_by_page_results.append({"page_number": ind+1, "questions": []})
     return page_by_page_results
