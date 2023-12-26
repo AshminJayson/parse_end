@@ -64,36 +64,36 @@ def fetch_image_details(images_paths):
 def extract_text_from_pages(file_id: str) -> list[Page]:
     pages = []
     pdf_path = temp_files_path + "\\" + file_id
-    # with open(pdf_path, 'rb') as file:
+    with open(pdf_path, 'rb') as file:
 
-    #     count = 1
+        count = 1
 
-    #     for page in PDFPage.get_pages(file, check_extractable=True):
-    #         resource_manager = PDFResourceManager()
-    #         output_string = io.StringIO()
-    #         converter = TextConverter(
-    #             resource_manager, output_string, laparams=None)
-    #         page_interpreter = PDFPageInterpreter(resource_manager, converter)
-    #         page_interpreter.process_page(page)
-    #         content = output_string.getvalue()
+        for page in PDFPage.get_pages(file, check_extractable=True):
+            resource_manager = PDFResourceManager()
+            output_string = io.StringIO()
+            converter = TextConverter(
+                resource_manager, output_string, laparams=None)
+            page_interpreter = PDFPageInterpreter(resource_manager, converter)
+            page_interpreter.process_page(page)
+            content = output_string.getvalue()
 
-    #         page_id = str(uuid.uuid4())
+            page_id = str(uuid.uuid4())
 
-    #         print(content)
-    #         pages.append(
-    #             Page(count, page_id, file_id, content, 0))
-    #         count += 1
+            print(content)
+            pages.append(
+                Page(count, page_id, file_id, content, 0))
+            count += 1
 
-    #     converter.close()
-    #     output_string.close()
+        converter.close()
+        output_string.close()
 
-    images_paths = save_pdf_as_image(pdf_path)
-    page_contents = fetch_image_details(images_paths)
+    # images_paths = save_pdf_as_image(pdf_path)
+    # page_contents = fetch_image_details(images_paths)
 
-    for ind, content in enumerate(page_contents):
-        page_id = str(uuid.uuid4())
-        pages.append(Page(ind + 1, page_id, file_id,
-                     content, len(page_contents)))
+    # for ind, content in enumerate(page_contents):
+        # page_id = str(uuid.uuid4())
+        # pages.append(Page(ind + 1, page_id, file_id,
+        #  content, len(page_contents)))
 
     return pages
 

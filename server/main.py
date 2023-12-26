@@ -54,6 +54,18 @@ async def receive_file(file: UploadFile):
     return {"fileId": file_id}
 
 
+@app.get("/file_status")
+async def get_file_status(fileId: str):
+    results = fetch_records_with_file_id(fileId)
+    if len(results) == 0:
+        return {'status': 'scheduled'}
+
+    if len(results) < results[0][3]:
+        return {'status': f'Processed {len(results)} of {results[0][3]} pages'}
+
+    return {"status": "completed"}
+
+
 @app.get("/file")
 async def get_questions(fileId: str):
     results = fetch_records_with_file_id(fileId)
@@ -61,8 +73,8 @@ async def get_questions(fileId: str):
     if len(results) == 0:
         return HTTPException(404, detail='Invalid fileId or file is still being parsed')
 
-    # if len(results) < results[0][3]:
-    #     return HTTPException(100, detail=f'File is still being processed | completed {len(results)} of {results[0][3]} pages')
+    if len(results) < results[0][3]:
+        return HTTPException(100, detail=f'File is still being processed | completed {len(results)} of {results[0][3]} pages')
 
     for ind, result in enumerate(results):
         try:
