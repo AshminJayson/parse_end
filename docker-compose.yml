@@ -1,6 +1,15 @@
 version: "3"
 
 services:
+    server:
+        container_name: server
+        build:
+            context: server
+            dockerfile: DockerFile
+        ports:
+            - 8000:8000
+
+
     rabbitmq:
         # Default username/password is guest/guest
         image: rabbitmq:3.8-management
@@ -9,6 +18,11 @@ services:
             - 15672:15672
         container_name: rabbitmq
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "rabbitmqctl", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
     db:
         # Default Configuration
@@ -25,7 +39,50 @@ services:
             - 5432:5432
 
     adminer:
+        container_name: adminer
         image: adminer
         restart: always
         ports:
             - 8080:8080
+
+    
+    extract_pages_worker:
+        container_name: extract_pages_worker
+        build:
+            context: workers/extract_pages
+            dockerfile: DockerFile
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+
+
+
+
+
+
+    # fetch_questions_worker-1:
+    #     container_name: fetch_questions_worker-1
+    #     build:
+    #         context: workers/fetch_questions
+    #         dockerfile: DockerFile
+    #     depends_on:
+    #         rabbitmq:
+    #             condition: service_healthy
+
+    # fetch_questions_worker-2:
+    #     container_name: fetch_questions_worker-2
+    #     build:
+    #         context: workers/fetch_questions
+    #         dockerfile: DockerFile
+    #     depends_on:
+    #         rabbitmq:
+    #             condition: service_healthy
+
+    # fetch_questions_worker-3:
+    #     container_name: fetch_questions_worker-3
+    #     build:
+    #         context: workers/fetch_questions
+    #         dockerfile: DockerFile
+    #     depends_on:
+    #         rabbitmq:
+    #             condition: service_healthy

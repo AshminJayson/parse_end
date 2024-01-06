@@ -113,28 +113,40 @@ def send_page_content_message(page_string: str):
 
 
 def main():
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
-    channel = connection.channel()
-    queue_name = 'files'
-    channel.queue_declare(queue=queue_name)
 
-    def callback(ch, method, properties, body):
-        file_id = body.decode('utf-8')
-        print(f"Processing file {file_id}...")
-        pages: list[Page] = extract_text_from_pages(file_id)
-        print("Total pages: ", len(pages))
-        for page in pages:
-            page_string = json.dumps(page.__dict__)
-            send_page_content_message(page_string)
+    try:
+        rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
+        rabbitmq_port = int(os.environ.get("RABBITMQ_PORT", 5672))
+        rabbitmq_user = os.environ.get("RABBITMQ_USER", "guest")
+        rabbitmq_pass = os.environ.get("RABBITMQ_PASS", "guest")
 
-        print(f"File {file_id} has been completely processed.")
+        print(rabbitmq_host, rabbitmq_port, rabbitmq_user, rabbitmq_pass)
 
-    channel.basic_consume(
-        queue=queue_name, on_message_callback=callback, auto_ack=True)
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=rabbitmq_host, port=rabbitmq_port,
+                                      credentials=pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)))
+        channel = connection.channel()
+        queue_name = 'files'
+        channel.queue_declare(queue=queue_name)
 
-    print(' [*] Waiting for messages. To exit press CTRL+C')
-    channel.start_consuming()
+        def callback(ch, method, properties, body):
+            file_id = body.decode('utf-8')
+            print(f"Processing file {file_id}...")
+            pages: list[Page] = extract_text_from_pages(file_id)
+            print("Total pages: ", len(pages))
+            for page in pages:
+                page_string = json.dumps(page.__dict__)
+                send_page_content_message(page_string)
+
+            print(f"File {file_id} has been completely processed.")
+
+        channel.basic_consume(
+            queue=queue_name, on_message_callback=callback, auto_ack=True)
+
+        print(' [*] Waiting for messages. To exit press CTRL+C')
+        channel.start_consuming()
+    except pika.exceptions.AMQPConnectionError:
+        print("RabbitMQ server is not running. Please start it and try again.")
 
 
 if __name__ == '__main__':

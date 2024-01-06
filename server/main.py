@@ -4,13 +4,14 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pika
 
-from server.utils import fetch_records_with_file_id
+from utils import fetch_records_with_file_id
 
 app = FastAPI()
 
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "https://question-parser.vercel.app"
 ]
 
 app.add_middleware(
@@ -70,6 +71,7 @@ async def get_file_status(fileId: str):
 async def get_questions(fileId: str):
     results = fetch_records_with_file_id(fileId)
     page_by_page_results = []
+    print(len(results))
     if len(results) == 0:
         return HTTPException(404, detail='Invalid fileId or file is still being parsed')
 
