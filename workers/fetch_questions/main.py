@@ -3,13 +3,9 @@ import openai
 import os
 import sys
 import pika
-from dotenv import load_dotenv
 import timeit
 import json
 import psycopg2
-
-
-load_dotenv()
 
 
 def insert_page_to_db(fileId, pageId, pageNumber, totalPages, content, questions):
@@ -109,22 +105,32 @@ def thread_wrapper(ch, method, body):
 
 
 def main():
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
-    channel = connection.channel()
+    try:
+        rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
+        rabbitmq_port = int(os.environ.get("RABBITMQ_PORT", 5672))
+        rabbitmq_user = os.environ.get("RABBITMQ_USER", "guest")
+        rabbitmq_pass = os.environ.get("RABBITMQ_PASS", "guest")
 
-    channel.queue_declare(queue='pages')
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=rabbitmq_host, port=rabbitmq_port,
+                                      credentials=pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)))
+        channel = connection.channel()
 
-    def callback(ch, method, properties, body):
-        t = threading.Thread(target=thread_wrapper, args=(ch, method, body))
-        t.start()
+        channel.queue_declare(queue='pages')
 
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(
-        queue='pages', on_message_callback=callback, auto_ack=False)
+        def callback(ch, method, properties, body):
+            t = threading.Thread(target=thread_wrapper,
+                                 args=(ch, method, body))
+            t.start()
 
-    print(' [*] Waiting for messages. To exit press CTRL+C')
-    channel.start_consuming()
+        channel.basic_qos(prefetch_count=1)
+        channel.basic_consume(
+            queue='pages', on_message_callback=callback, auto_ack=False)
+
+        print(' [*] Waiting for messages. To exit press CTRL+C')
+        channel.start_consuming()
+    except pika.exceptions.AMQPConnectionError:
+        print("RabbitMQ server is not running. Please start it and try again.")
 
 
 if __name__ == '__main__':

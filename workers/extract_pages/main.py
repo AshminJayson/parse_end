@@ -25,7 +25,12 @@ class Page:
         self.content = content
 
 
-temp_files_path = os.getenv('TEMP_FILES_PATH')
+temp_files_path = "/app/shared"
+
+rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
+rabbitmq_port = int(os.environ.get("RABBITMQ_PORT", 5672))
+rabbitmq_user = os.environ.get("RABBITMQ_USER", "guest")
+rabbitmq_pass = os.environ.get("RABBITMQ_PASS", "guest")
 
 
 def save_pdf_as_image(path):
@@ -34,8 +39,8 @@ def save_pdf_as_image(path):
     images_path = []
     for i in range(len(images)):
         # Save pages as images in the pdf
-        images_path.append(temp_files_path + "\\" + 'page' + str(i) + '.jpg')
-        images[i].save(temp_files_path + "\\" +
+        images_path.append(temp_files_path + "/" + 'page' + str(i) + '.jpg')
+        images[i].save(temp_files_path + "/" +
                        'page' + str(i) + '.jpg', 'JPEG')
 
     return images_path
@@ -63,7 +68,7 @@ def fetch_image_details(images_paths):
 
 def extract_text_from_pages(file_id: str) -> list[Page]:
     pages = []
-    pdf_path = temp_files_path + "\\" + file_id
+    pdf_path = temp_files_path + "/" + file_id
     with open(pdf_path, 'rb') as file:
 
         count = 1
@@ -99,29 +104,26 @@ def extract_text_from_pages(file_id: str) -> list[Page]:
 
 
 def send_page_content_message(page_string: str):
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-    queue_name = 'pages'
-    channel.queue_declare(queue=queue_name)
+    try:
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=rabbitmq_host, port=rabbitmq_port,
+                                      credentials=pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)))
+        channel = connection.channel()
+        queue_name = 'pages'
+        channel.queue_declare(queue=queue_name)
 
-    channel.basic_publish(exchange='',
-                          routing_key=queue_name,
-                          body=page_string)
+        channel.basic_publish(exchange='',
+                              routing_key=queue_name,
+                              body=page_string)
 
-    connection.close()
+        connection.close()
+    except pika.exceptions.AMQPConnectionError:
+        print("RabbitMQ server is not running. Please start it and try again.")
 
 
 def main():
 
     try:
-        rabbitmq_host = os.environ.get("RABBITMQ_HOST", "localhost")
-        rabbitmq_port = int(os.environ.get("RABBITMQ_PORT", 5672))
-        rabbitmq_user = os.environ.get("RABBITMQ_USER", "guest")
-        rabbitmq_pass = os.environ.get("RABBITMQ_PASS", "guest")
-
-        print(rabbitmq_host, rabbitmq_port, rabbitmq_user, rabbitmq_pass)
-
         connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=rabbitmq_host, port=rabbitmq_port,
                                       credentials=pika.PlainCredentials(rabbitmq_user, rabbitmq_pass)))
