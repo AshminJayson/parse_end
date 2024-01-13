@@ -119,9 +119,8 @@ def main():
         channel.queue_declare(queue='pages')
 
         def callback(ch, method, properties, body):
-            t = threading.Thread(target=thread_wrapper,
-                                 args=(ch, method, body))
-            t.start()
+            thread_wrapper(ch, method, body)
+            # t.start()
 
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(

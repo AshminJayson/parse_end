@@ -4,6 +4,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pika
 import os
+import requests
 
 from utils import fetch_records_with_file_id
 
@@ -14,6 +15,35 @@ origins = [
     "http://localhost:3000",
     "https://question-parser.vercel.app"
 ]
+
+
+def send_for_processing(file_path):
+
+    options = {
+        "conversion_formats": {"docx": True, "tex.zip": True},
+        "math_inline_delimiters": ["$", "$"],
+        "rm_spaces": True
+    }
+
+    headers = {"app_key": os.getenv('MATHPIX_APP_KEY'),
+               "app_id": os.getenv('MATHPIX_APP_ID')
+               }
+
+    r = requests.post("https://api.mathpix.com/v3/pdf",
+                      data={
+                          "options_json": json.dumps(options)
+                      },
+                      headers=headers,
+                      files={
+                          "file": open(file_path, "rb")
+                      }
+                      )
+
+    res = r.json()
+    print(res)
+    print('Uploaded file to Mathpix API')
+    return res.get("pdf_id")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,10 +80,13 @@ def send_message_to_file_queue(file_id: str):
 async def receive_file(file: UploadFile):
     file_id = str(uuid.uuid4())
 
-    with open(f"{save_path}/{file_id}", "wb") as f:
+    file_path = f"{save_path}/{file_id}"
+    with open(file_path, "wb") as f:
         f.write(await file.read())
 
-    send_message_to_file_queue(file_id)
+    pdf_id = send_for_processing(file_path)
+
+    send_message_to_file_queue(pdf_id)
     return {"fileId": file_id}
 
 
