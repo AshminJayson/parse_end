@@ -87,7 +87,7 @@ async def receive_file(file: UploadFile):
     pdf_id = send_for_processing(file_path)
 
     send_message_to_file_queue(pdf_id)
-    return {"fileId": file_id}
+    return {"fileId": pdf_id}
 
 
 @app.get("/file_status")

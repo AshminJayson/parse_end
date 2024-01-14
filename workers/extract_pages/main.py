@@ -85,7 +85,7 @@ def extract_text_from_pages(doc_id: str) -> list[Page]:
         count += 1
 
     for page in pages:
-        page.total_pages = count
+        page.total_pages = count - 1
     return pages
 
 

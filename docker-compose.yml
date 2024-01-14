@@ -96,24 +96,97 @@ services:
                 condition: service_healthy
         volumes:
             - shared_data:/app/shared
+            
+    fetch_questions_worker-2:
+        container_name: fetch_questions_worker-2
+        build:
+            context: workers/fetch_questions
+            dockerfile: DockerFile
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - DB_HOST=db
+            - DB_NAME=test
+            - DB_USER=postgres
+            - DB_PASSWORD=example
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+        volumes:
+            - shared_data:/app/shared
 
-    # fetch_questions_worker-2:
-    #     container_name: fetch_questions_worker-2
-    #     build:
-    #         context: workers/fetch_questions
-    #         dockerfile: DockerFile
-    #     environment:
-    #         - RABBITMQ_HOST=rabbitmq
-    #         - DB_HOST=db
-    #         - DB_NAME=test
-    #         - DB_USER=postgres
-    #         - DB_PASSWORD=example
-    #         - OPENAI_API_KEY=${OPENAI_API_KEY}
-    #     depends_on:
-    #         rabbitmq:
-    #             condition: service_healthy
-    #     volumes:
-    #         - shared_data:/app/shared
+    fetch_questions_worker-3:
+        container_name: fetch_questions_worker-3
+        build:
+            context: workers/fetch_questions
+            dockerfile: DockerFile
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - DB_HOST=db
+            - DB_NAME=test
+            - DB_USER=postgres
+            - DB_PASSWORD=example
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+        volumes:
+            - shared_data:/app/shared
+
+    fetch_questions_worker-4:
+        container_name: fetch_questions_worker-4
+        build:
+            context: workers/fetch_questions
+            dockerfile: DockerFile
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - DB_HOST=db
+            - DB_NAME=test
+            - DB_USER=postgres
+            - DB_PASSWORD=example
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+        volumes:
+            - shared_data:/app/shared
+
+    fetch_questions_worker-5:
+        container_name: fetch_questions_worker-5
+        build:
+            context: workers/fetch_questions
+            dockerfile: DockerFile
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - DB_HOST=db
+            - DB_NAME=test
+            - DB_USER=postgres
+            - DB_PASSWORD=example
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+        volumes:
+            - shared_data:/app/shared
+
+    fetch_questions_worker-6:
+        container_name: fetch_questions_worker-6
+        build:
+            context: workers/fetch_questions
+            dockerfile: DockerFile
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - DB_HOST=db
+            - DB_NAME=test
+            - DB_USER=postgres
+            - DB_PASSWORD=example
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+        volumes:
+            - shared_data:/app/shared
+
 
 
 volumes:
