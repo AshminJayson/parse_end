@@ -7,7 +7,7 @@ services:
             context: server
             dockerfile: DockerFile
         ports:
-            - 8000:8000
+            - 80:8000
         environment:
             - RABBITMQ_HOST=rabbitmq
             - DB_HOST=db
@@ -38,8 +38,8 @@ services:
         healthcheck:
             test: [ "CMD", "rabbitmqctl", "ping" ]
             interval: 10s
-            timeout: 5s
-            retries: 5
+            timeout: 10s
+            retries: 10
 
     db:
         # Default Configuration
